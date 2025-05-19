@@ -111,7 +111,7 @@ func UpdateMenu() gin.HandlerFunc {
 		if menu.Start_date != nil && menu.End_date != nil {
 			if !inTimeSpan(*menu.Start_date, *menu.End_date, time.Now()) {
 				msg := "kindly retype the start date and end date"
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Start date must be before end date"})
+				c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 				defer cancel()
 				return
 			}
@@ -136,7 +136,7 @@ func UpdateMenu() gin.HandlerFunc {
 				Upsert: &upsert,
 			}
 
-			menu.Collection.UpdateOne(
+			result, err := menuCollection.UpdateOne(
 				ctx,
 				filter,
 				bson.D{
@@ -144,6 +144,14 @@ func UpdateMenu() gin.HandlerFunc {
 				},
 				&opt,
 			)
+
+			if err != nil {
+				msg := "Menu updated failed"
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			}
+
+			defer cancel()
+			c.JSON(http.StatusOK, result)
 		}
 	}
 }
