@@ -62,6 +62,7 @@ func GetFoods() gin.HandlerFunc {
 
 		if err = result.All(ctx, &allFood); err != nil {
 			log.Fatal(err)
+			return
 		}
 
 		c.JSON(http.StatusOK, allFood[0])

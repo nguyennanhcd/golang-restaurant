@@ -33,7 +33,7 @@ func GetInvoices() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(c.Request.Context(), 100*time.Second)
 
-		result, err := invoiceCollection.Find(ctx, bson.D{})
+		result, err := invoiceCollection.Find(ctx, bson.M{})
 
 		defer cancel()
 
@@ -45,6 +45,7 @@ func GetInvoices() gin.HandlerFunc {
 		var allInvoices []bson.M
 		if err = result.All(ctx, &allInvoices); err != nil {
 			log.Fatal(err)
+			return
 		}
 
 		c.JSON((http.StatusOK), allInvoices)
