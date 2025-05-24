@@ -35,6 +35,7 @@ func GetOrders() gin.HandlerFunc {
 		var allOrders []bson.M
 		if err = result.All(ctx, &allOrders); err != nil {
 			log.Fatal(err)
+			return
 		}
 
 		if len(allOrders) == 0 {
