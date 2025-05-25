@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"golang-restaurant-management/database"
 	"golang-restaurant-management/models"
 	"log"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -68,6 +68,7 @@ func GetTable() gin.HandlerFunc {
 func CreateTable() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
 		var table models.Table
 
@@ -76,6 +77,7 @@ func CreateTable() gin.HandlerFunc {
 			return
 		}
 
+		var validate = validator.New()
 		validationErr := validate.Struct(table)
 
 		if validationErr != nil {
@@ -95,7 +97,6 @@ func CreateTable() gin.HandlerFunc {
 			return
 		}
 
-		defer cancel()
 		c.JSON(http.StatusOK, result)
 
 	}
@@ -104,6 +105,7 @@ func CreateTable() gin.HandlerFunc {
 func UpdateTable() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
 		var table models.Table
 
@@ -144,7 +146,7 @@ func UpdateTable() gin.HandlerFunc {
 		)
 
 		if err != nil {
-			msg := fmt.Sprintf("Table item update failed ")
+			msg := "Table item update failed "
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -32,6 +33,7 @@ var invoiceCollection *mongo.Collection = database.OpenCollection(database.Clien
 func GetInvoices() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(c.Request.Context(), 100*time.Second)
+		defer cancel()
 
 		result, err := invoiceCollection.Find(ctx, bson.M{})
 
@@ -63,14 +65,13 @@ func GetInvoice() gin.HandlerFunc {
 		defer cancel()
 
 		if err != nil {
-			c.JSON(500, gin.H{"error": "Error occurred while fetching order"})
+			c.JSON(500, gin.H{"error": "Error occurred while fetching invoice"})
 			return
 		}
 
 		var invoiceView InvoiceViewFormat
 
 		allOrderItems, err := ItemsByOrder(invoice.Order_id)
-
 		invoiceView.Order_id = invoice.Order_id
 		invoiceView.Payment_due_date = invoice.Payment_due_date
 
@@ -80,7 +81,7 @@ func GetInvoice() gin.HandlerFunc {
 		}
 
 		invoiceView.Invoice_id = invoice.Invoice_id
-		invoiceView.Payment_status = *&invoice.Payment_status
+		invoiceView.Payment_status = invoice.Payment_status
 		invoiceView.Payment_due = allOrderItems[0]["payment_due"]
 		invoiceView.Table_number = allOrderItems[0]["table_number"]
 		invoiceView.Order_details = allOrderItems[0]["order_items"]
@@ -93,6 +94,7 @@ func GetInvoice() gin.HandlerFunc {
 func CreateInvoice() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(c.Request.Context(), 100*time.Second)
+		defer cancel()
 
 		var invoice models.Invoice
 
@@ -121,6 +123,7 @@ func CreateInvoice() gin.HandlerFunc {
 		invoice.ID = primitive.NewObjectID()
 		invoice.Invoice_id = invoice.ID.Hex()
 
+		var validate = validator.New()
 		validationErr := validate.Struct(invoice)
 
 		if validationErr != nil {
@@ -131,7 +134,7 @@ func CreateInvoice() gin.HandlerFunc {
 		result, insertErr := invoiceCollection.InsertOne(ctx, invoice)
 
 		if insertErr != nil {
-			msg := fmt.Sprintf("Invoice was not created")
+			msg := "Invoice was not created"
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
@@ -145,6 +148,7 @@ func CreateInvoice() gin.HandlerFunc {
 func UpdateInvoice() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(c.Request.Context(), 100*time.Second)
+		defer cancel()
 
 		var invoice models.Invoice
 		invoiceID := c.Param("invoice_id")
@@ -189,7 +193,7 @@ func UpdateInvoice() gin.HandlerFunc {
 		)
 
 		if err != nil {
-			msg := fmt.Sprintf("Invoice was not updated")
+			msg := "Invoice was not updated"
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}

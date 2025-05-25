@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"golang-restaurant-management/database"
 	"golang-restaurant-management/models"
 	"log"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -62,12 +62,14 @@ func CreateMenu() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var menu models.Menu
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
 		if err := c.BindJSON(&menu); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
+		var validate = validator.New()
 		validationErr := validate.Struct(menu)
 		if validationErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
@@ -82,7 +84,7 @@ func CreateMenu() gin.HandlerFunc {
 		result, insertErr := menuCollection.InsertOne(ctx, menu)
 
 		if insertErr != nil {
-			msg := fmt.Sprintf("Menu item was not created")
+			msg := "Menu item was not created"
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
@@ -100,6 +102,8 @@ func inTimeSpan(start, end, check time.Time) bool {
 func UpdateMenu() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
 		var menu models.Menu
 
 		if err := c.BindJSON(&menu); err != nil {
