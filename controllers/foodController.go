@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"golang-restaurant-management/database"
 	"golang-restaurant-management/models"
 	"log"
@@ -20,7 +19,6 @@ import (
 )
 
 var foodCollection *mongo.Collection = database.OpenCollection(database.Client, "food")
-var validate = validator.New()
 
 func GetFoods() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -37,7 +35,12 @@ func GetFoods() gin.HandlerFunc {
 		}
 
 		startIndex := (page - 1) * recordPerPage
-		startIndex, err = strconv.Atoi(c.Query("startIndex"))
+		if s := c.Query("startIndex"); s != "" {
+			startIndex, err = strconv.Atoi(s)
+			if err != nil {
+				startIndex = (page - 1) * recordPerPage
+			}
+		}
 
 		matchStage := bson.D{{Key: "$match", Value: bson.D{}}}
 		groupStage := bson.D{{Key: "$group", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "_id", Value: "null"}}}, {Key: "totalCount", Value: bson.D{{Key: "$sum", Value: 1}}}, {Key: "data", Value: bson.D{{Key: "$push", Value: "$$ROOT"}}}}}}
@@ -91,6 +94,8 @@ func GetFood() gin.HandlerFunc {
 func CreateFood() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
 		var menu models.Menu
 		var food models.Food
 
@@ -99,6 +104,7 @@ func CreateFood() gin.HandlerFunc {
 			return
 		}
 
+		var validate = validator.New()
 		validationErr := validate.Struct(food)
 		if validationErr != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
@@ -106,10 +112,9 @@ func CreateFood() gin.HandlerFunc {
 		}
 
 		err := menuCollection.FindOne(ctx, bson.M{"menu_id": food.Menu_id}).Decode(&menu)
-		defer cancel()
 
 		if err != nil {
-			msg := fmt.Sprintf("Menu was not found")
+			msg := "Menu was not found"
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
@@ -124,7 +129,7 @@ func CreateFood() gin.HandlerFunc {
 		result, insertErr := foodCollection.InsertOne(ctx, food)
 
 		if insertErr != nil {
-			msg := fmt.Sprintf("Food item was not created")
+			msg := "Food item was not created"
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
@@ -146,6 +151,7 @@ func toFixed(num float64, precision int) float64 {
 func UpdateFood() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 		var menu models.Menu
 		var food models.Food
 
@@ -175,7 +181,7 @@ func UpdateFood() gin.HandlerFunc {
 			defer cancel()
 
 			if err != nil {
-				msg := fmt.Sprintf("Menu was not found")
+				msg := "Menu was not found"
 				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 				return
 			}
@@ -204,7 +210,7 @@ func UpdateFood() gin.HandlerFunc {
 		)
 
 		if err != nil {
-			msg := fmt.Sprintf("Food item update failed")
+			msg := "Food item update failed"
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 		}
 		c.JSON(http.StatusOK, result)

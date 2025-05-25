@@ -11,5 +11,4 @@ func FoodRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/foods/:user_id", controller.GetFood())
 	incomingRoutes.POST("/foods", controller.CreateFood())
 	incomingRoutes.PATCH("/foods/:food_id", controller.UpdateFood())
-
 }

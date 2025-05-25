@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"golang-restaurant-management/database"
 	"golang-restaurant-management/models"
 	"log"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -54,7 +54,7 @@ func GetOrder() gin.HandlerFunc {
 
 		var order models.Order
 
-		err := foodCollection.FindOne(ctx, bson.M{"order_id": orderID}).Decode(&order)
+		err := orderCollection.FindOne(ctx, bson.M{"order_id": orderID}).Decode(&order)
 		defer cancel()
 
 		if err != nil {
@@ -69,6 +69,7 @@ func GetOrder() gin.HandlerFunc {
 func CreateOrder() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
 		var table models.Table
 		var order models.Order
@@ -78,6 +79,7 @@ func CreateOrder() gin.HandlerFunc {
 			return
 		}
 
+		var validate = validator.New()
 		validationErr := validate.Struct(order)
 
 		if validationErr != nil {
@@ -91,7 +93,7 @@ func CreateOrder() gin.HandlerFunc {
 			defer cancel()
 
 			if err != nil {
-				msg := fmt.Sprintf("Table was not found")
+				msg := "Table was not found"
 				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 				return
 			}
@@ -105,7 +107,7 @@ func CreateOrder() gin.HandlerFunc {
 
 		result, insertErr := orderCollection.InsertOne(ctx, order)
 		if insertErr != nil {
-			msg := fmt.Sprintf("Order was not created")
+			msg := "Order was not created"
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
@@ -118,6 +120,7 @@ func CreateOrder() gin.HandlerFunc {
 func UpdateOrder() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
 		var table models.Table
 		var order models.Order
@@ -134,7 +137,7 @@ func UpdateOrder() gin.HandlerFunc {
 		if order.Table_id != nil {
 			err := tableCollection.FindOne(ctx, bson.M{"table_id": order.Table_id}).Decode(&table)
 			if err != nil {
-				msg := fmt.Sprintf("Table was not found")
+				msg := "Table was not found"
 				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 				return
 			}
@@ -163,7 +166,7 @@ func UpdateOrder() gin.HandlerFunc {
 		)
 
 		if err != nil {
-			msg := fmt.Sprintf("Order was not updated")
+			msg := "Order was not updated"
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}

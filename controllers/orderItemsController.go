@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -186,6 +187,7 @@ func GetOrderItem() gin.HandlerFunc {
 func CreateOrderItem() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(c.Request.Context(), 100*time.Second)
+		defer cancel()
 
 		var orderItemPack OrderItemPack
 		var order models.Order
@@ -204,6 +206,7 @@ func CreateOrderItem() gin.HandlerFunc {
 		for _, orderItem := range orderItemPack.Order_items {
 			orderItem.Order_id = order_id
 
+			var validate = validator.New()
 			validationErr := validate.Struct(orderItem)
 
 			if validationErr != nil {
@@ -227,8 +230,6 @@ func CreateOrderItem() gin.HandlerFunc {
 			log.Fatal(err)
 		}
 
-		defer cancel()
-
 		c.JSON(http.StatusOK, insertedOrderItems)
 	}
 }
@@ -236,6 +237,7 @@ func CreateOrderItem() gin.HandlerFunc {
 func UpdateOrderItem() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(c.Request.Context(), 100*time.Second)
+		defer cancel()
 
 		orderItemId := c.Param("order_item_id")
 
@@ -246,15 +248,15 @@ func UpdateOrderItem() gin.HandlerFunc {
 		var updateObj primitive.D
 
 		if orderItem.Unit_price != nil {
-			updateObj = append(updateObj, bson.E{Key: "unit_price", Value: *&orderItem.Unit_price})
+			updateObj = append(updateObj, bson.E{Key: "unit_price", Value: orderItem.Unit_price})
 		}
 
 		if orderItem.Quantity != nil {
-			updateObj = append(updateObj, bson.E{Key: "quantity", Value: *&orderItem.Quantity})
+			updateObj = append(updateObj, bson.E{Key: "quantity", Value: orderItem.Quantity})
 		}
 
 		if orderItem.Food_id != nil {
-			updateObj = append(updateObj, bson.E{Key: "food_id", Value: *&orderItem.Food_id})
+			updateObj = append(updateObj, bson.E{Key: "food_id", Value: orderItem.Food_id})
 		}
 
 		orderItem.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
