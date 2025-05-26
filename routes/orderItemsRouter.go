@@ -10,6 +10,6 @@ func OrderItemRoutes(orderItemRoutes *gin.Engine) {
 	orderItemRoutes.GET("/orderItems", controller.GetOrderItems())
 	orderItemRoutes.GET("/orderItems/:orderItem_id", controller.GetOrderItem())
 	orderItemRoutes.GET("/orderItems-order/:order_id", controller.GetOrderItemsByOrder())
-	orderItemRoutes.POST("/orderItems", controller.CreateOrderItem())
+	orderItemRoutes.POST("/orderItem", controller.CreateOrderItem())
 	orderItemRoutes.PATCH("/orderItems/:orderItem_id", controller.UpdateOrderItem())
 }
