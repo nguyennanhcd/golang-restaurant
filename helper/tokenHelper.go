@@ -2,6 +2,7 @@ package helper
 
 import (
 	"context"
+	"fmt"
 	"golang-restaurant-management/database"
 	"log"
 	"os"
@@ -85,10 +86,33 @@ func UpdateAllTokens(signedToken, signedRefreshToken, userId string) {
 		return
 	}
 
-	return
-
 }
 
-func ValidateToken(token string) {
+func ValidateToken(signedToken string) (claims *SignedDetails, msg string) {
 
+	token, err := jwt.ParseWithClaims(
+		signedToken,
+		&SignedDetails{},
+		func(token *jwt.Token) (interface{}, error) {
+			return []byte(SECRET_KEY), nil
+		},
+	)
+
+	// the token is invalid
+	claims, ok := token.Claims.(*SignedDetails)
+	if !ok {
+		msg = fmt.Sprintf("Token is invalid")
+		msg = err.Error()
+		return
+	}
+
+	// the token is valid
+
+	if claims.ExpiresAt < time.Now().Local().Unix() {
+		msg = fmt.Sprintf("Token is expired")
+		msg = err.Error()
+		return
+	}
+
+	return claims, msg
 }
