@@ -209,7 +209,7 @@ func Login() gin.HandlerFunc {
 
 		// if all goes well, generate the tokens
 
-		token, refreshToken, _ := helper.GenerateAllTokens(*&foundUser.Email, *&foundUser.First_name, *&foundUser.Last_name, foundUser.User_id)
+		token, refreshToken, _ := helper.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.User_id)
 
 		// update tokens - token and refresh token
 
