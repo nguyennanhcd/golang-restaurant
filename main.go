@@ -4,6 +4,7 @@ import (
 	"golang-restaurant-management/database"
 	middlewares "golang-restaurant-management/middleware"
 	routes "golang-restaurant-management/routes"
+	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -30,5 +31,12 @@ func main() {
 	routes.OrderRoutes(router)
 	routes.OrderItemRoutes(router)
 	routes.InvoiceRoutes(router)
+
+	log.Printf("Server running on http://localhost:%s", port)
+
+	// Start the server
+	if err := router.Run(":" + port); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 
 }
