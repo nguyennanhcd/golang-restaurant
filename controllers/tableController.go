@@ -38,7 +38,7 @@ func GetTables() gin.HandlerFunc {
 		}
 
 		if len(allTables) == 0 {
-			c.JSON(404, gin.H{"message": "No orders found"})
+			c.JSON(404, gin.H{"message": "No tables found"})
 			return
 		}
 
@@ -53,7 +53,7 @@ func GetTable() gin.HandlerFunc {
 
 		var table models.Table
 
-		err := foodCollection.FindOne(ctx, bson.M{"table_id": orderID}).Decode(&table)
+		err := tableCollection.FindOne(ctx, bson.M{"table_id": orderID}).Decode(&table)
 		defer cancel()
 
 		if err != nil {
