@@ -116,8 +116,8 @@ func ItemsByOrder(id string) (OrderItems []primitive.M, err error) {
 	projectStage := bson.D{
 		{
 			Key: "$project", Value: bson.D{
-				{Key: "id", Value: 0},
-				{Key: "amount", Value: "$food.price"},
+				{Key: "_id", Value: 0},
+				{Key: "amount", Value: bson.D{{Key: "$multiply", Value: bson.A{"$unit_price", "quantity"}}}},
 				{Key: "total_count", Value: 1},
 				{Key: "food_name", Value: "$food.name"},
 				{Key: "food_image", Value: "$food.food_image"},
@@ -128,12 +128,23 @@ func ItemsByOrder(id string) (OrderItems []primitive.M, err error) {
 				{Key: "quantity", Value: 1},
 			}}}
 
-	groupStage := bson.D{{Key: "$group", Value: bson.D{{Key: "_id", Value: bson.D{{Key: "order_id", Value: "$order_id"}, {Key: "table_id", Value: "$table_id"}, {Key: "table_number", Value: "$table_number"}}}, {Key: "payment_due", Value: bson.D{{Key: "$sum", Value: "$amount"}}}, {Key: "total_count", Value: bson.D{{Key: "$sum", Value: 1}}}, {Key: "order_items", Value: bson.D{{Key: "$push", Value: "$$ROOT"}}}}}}
+	groupStage := bson.D{
+		{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: bson.D{
+				{Key: "order_id", Value: "$order_id"},
+				{Key: "table_id", Value: "$table_id"},
+				{Key: "table_number", Value: "$table_number"},
+			}},
+			{Key: "total_amount", Value: bson.D{{Key: "$sum", Value: "$amount"}}},
+			{Key: "total_count", Value: bson.D{{Key: "$sum", Value: 1}}},
+			{Key: "order_items", Value: bson.D{{Key: "$push", Value: "$$ROOT"}}},
+		}},
+	}
 
 	projectStage2 := bson.D{
 		{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 0},
-			{Key: "payment_due", Value: 1},
+			{Key: "total_amount", Value: 1},
 			{Key: "total_count", Value: 1},
 			{Key: "table_number", Value: "$_id.table_number"},
 			{Key: "order_items", Value: 1},
