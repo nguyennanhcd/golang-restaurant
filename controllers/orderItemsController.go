@@ -117,7 +117,7 @@ func ItemsByOrder(id string) (OrderItems []primitive.M, err error) {
 		{
 			Key: "$project", Value: bson.D{
 				{Key: "_id", Value: 0},
-				{Key: "amount", Value: bson.D{{Key: "$multiply", Value: bson.A{"$unit_price", "quantity"}}}},
+				{Key: "amount", Value: bson.D{{Key: "$multiply", Value: bson.A{"$unit_price", "$quantity"}}}},
 				{Key: "total_count", Value: 1},
 				{Key: "food_name", Value: "$food.name"},
 				{Key: "food_image", Value: "$food.food_image"},
