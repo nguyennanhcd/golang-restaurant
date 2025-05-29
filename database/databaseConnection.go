@@ -19,7 +19,6 @@ func DBInstance() *mongo.Client {
 	}
 
 	MongoURI := os.Getenv("MONGO_URI")
-	fmt.Print("MongoDB URI: ", MongoURI)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
