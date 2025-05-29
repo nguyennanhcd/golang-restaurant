@@ -3,23 +3,43 @@ package middlewares
 import (
 	"golang-restaurant-management/helper"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 func Authentication() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		clientToken := c.Request.Header.Get("token")
 
+		clientToken := strings.TrimSpace(c.Request.Header.Get("Authorization"))
 		if clientToken == "" {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unauthorized, No token provided"})
+			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "No token provided"})
 			c.Abort()
 			return
 		}
 
-		claims, err := helper.ValidateToken(clientToken)
-		if err != "" {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		if strings.HasPrefix(clientToken, "Bearer ") {
+			clientToken = strings.TrimPrefix(clientToken, "Bearer ")
+			clientToken = strings.TrimSpace(clientToken)
+		} else {
+			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid token format, expected 'Bearer <token>'"})
+			c.Abort()
+			return
+		}
+
+		claims, errMsg := helper.ValidateToken(clientToken)
+		if errMsg != "" {
+			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: errMsg})
+			c.Abort()
+			return
+		}
+
+		if claims.TokenType != "access" {
+			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid token type, access token required"})
 			c.Abort()
 			return
 		}
