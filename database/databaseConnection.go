@@ -4,20 +4,27 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func DBInstance() *mongo.Client {
-	MongoDb := "mongodb://localhost:27017"
-	fmt.Print("MongoDB URI: ", MongoDb)
+
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: Error loading .env file: %v", err)
+	}
+
+	MongoURI := os.Getenv("MONGO_URI")
+	fmt.Print("MongoDB URI: ", MongoURI)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(MongoDb))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(MongoURI))
 	if err != nil {
 		log.Fatal("Error connecting to MongoDB: ", err)
 	}
