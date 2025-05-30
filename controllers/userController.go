@@ -20,6 +20,10 @@ import (
 
 var userCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
 
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 10000)
@@ -166,7 +170,7 @@ func SignUp() gin.HandlerFunc {
 
 		// if all ok, then you insert this new user into the user collection
 
-		resultInsertionNumber, insertErr := userCollection.InsertOne(ctx, user)
+		_, insertErr := userCollection.InsertOne(ctx, user)
 		if insertErr != nil {
 			msg := "User item was not created"
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
@@ -175,7 +179,11 @@ func SignUp() gin.HandlerFunc {
 
 		// return status OK and send the result back
 
-		c.JSON(http.StatusOK, resultInsertionNumber)
+		c.JSON(http.StatusOK, gin.H{
+			"user_id":       user.User_id,
+			"token":         token,
+			"refresh_token": refreshToken,
+		})
 	}
 }
 
@@ -214,14 +222,84 @@ func Login() gin.HandlerFunc {
 
 		// if all goes well, generate the tokens
 
-		token, refreshToken, _ := helper.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.User_id)
+		token, refreshToken, generateErr := helper.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.User_id)
+
+		if generateErr != nil {
+			log.Printf("Error generating tokens: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+			return
+		}
 
 		// update tokens - token and refresh token
 
-		helper.UpdateAllTokens(token, refreshToken, foundUser.User_id)
+		if err := helper.UpdateAllTokens(token, refreshToken, foundUser.User_id); err != nil {
+			log.Printf("Error updating tokens: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tokens"})
+			return
+		}
 
 		// return status okn
-		c.JSON(http.StatusOK, foundUser)
+		c.JSON(http.StatusOK, gin.H{
+			"user_id":       foundUser.User_id,
+			"token":         token,
+			"refresh_token": refreshToken,
+		})
+	}
+}
+
+func RefreshToken() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
+		var request struct {
+			RefreshToken string `json:"refresh_token" binding:"required"`
+		}
+
+		if err := c.BindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+			return
+		}
+
+		claims, msg := helper.ValidateToken(request.RefreshToken)
+		if msg != "" {
+			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: msg})
+			return
+		}
+
+		if claims.TokenType != "refresh" {
+			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid token type, refresh token required"})
+			return
+		}
+
+		var user struct {
+			RefreshToken string `bson:"refresh_token"`
+		}
+
+		err := userCollection.FindOne(ctx, bson.M{"user_id": claims.Uid}).Decode(&user)
+		if err != nil || user.RefreshToken != request.RefreshToken {
+			c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid or revoked refresh token"})
+			return
+		}
+
+		token, refreshToken, err := helper.GenerateAllTokens(claims.Email, claims.First_name, claims.Last_name, claims.Uid)
+		if err != nil {
+			log.Printf("Error generating tokens: %v", err)
+			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to generate tokens"})
+			return
+		}
+
+		if err := helper.UpdateAllTokens(token, refreshToken, claims.Uid); err != nil {
+			log.Printf("Error updating tokens: %v", err)
+			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to update tokens"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"user_id":       claims.Uid,
+			"token":         token,
+			"refresh_token": refreshToken,
+		})
 	}
 }
 

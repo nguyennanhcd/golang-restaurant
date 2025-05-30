@@ -42,7 +42,7 @@ func GenerateAllTokens(email, firstName, lastName, uid string) (signedToken stri
 		Uid:        uid,
 		TokenType:  "access",
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
+			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(1)).Unix(),
 		},
 	}
 
@@ -53,7 +53,7 @@ func GenerateAllTokens(email, firstName, lastName, uid string) (signedToken stri
 		Uid:        uid,
 		TokenType:  "refresh",
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(168)).Unix(),
+			ExpiresAt: time.Now().Local().Add(time.Hour * 24 * time.Duration(30)).Unix(),
 		},
 	}
 
